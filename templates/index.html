@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interior Furniture Modeling App</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #f2f2f2; /* Neutral base color */
+            color: #333;
+        }
+        h1 {
+            color: #3498db; /* Accent color */
+        }
+        p {
+            color: #555;
+        }
+        #imageUpload {
+            margin: 10px 0;
+            padding: 10px;
+            border: 2px solid #90caf9; /* Lighter, cooler blue as an accent */
+            background-color: #fafafa; /* Slightly lighter neutral color for input background */
+            color: #333;
+            border-radius: 5px;
+        }
+        #stylePrompt {
+            margin: 10px 0;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 2px solid #90caf9; /* Lighter, cooler blue as an accent */
+            background-color: #fafafa; /* Slightly lighter neutral color for input background */
+            color: #333;
+            border-radius: 5px;
+        }
+        #generateButton {
+            background-color: #1565c0; /* Dark blue */
+            color: #fff;
+            padding: 15px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+        }
+        #uploadedImageContainer {
+            margin: 20px 0;
+        }
+        #loadingSymbol {
+            font-size: 24px;
+            margin-top: 10px;
+            display: none; /* Initially hidden */
+        }
+        #searchQueryBox {
+            display: none; /* Initially hidden */
+            margin-top: 20px;
+        }
+        #searchQueryInput {
+            padding: 10px;
+            border: 2px solid #90caf9; /* Lighter, cooler blue as an accent */
+            background-color: #fafafa; /* Slightly lighter neutral color for input background */
+            color: #333;
+            border-radius: 5px;
+        }
+        #searchButton {
+            background-color: #1565c0; /* Dark blue */
+            color: #fff;
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+        }
+        #spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #3498db; /* Blue color for the spinner */
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite; /* Animation to make it spin */
+        }
+
+        @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+        }
+
+        #loadingSymbol p {
+            margin-top: 10px;
+            color: #3498db; /* Blue color for the loading text */
+        }
+
+    </style>
+</head>
+<body>
+    <form id="uploadForm">
+        <h1>Welcome to RoomRemix!</h1>
+        <p>Select an image of your room and choose a category. Enter your preferred style below:</p>
+    
+        <input type="file" id="imageUpload" accept="image/*">
+        <select id="category">
+            <option value="kitchen">Kitchen</option>
+            <option value="living-room">Living Room</option>
+            <option value="bedroom">Bedroom</option>
+            <option value="study-room">Study Room</option>
+            <!-- Add more options for other categories -->
+        </select>
+        
+        <textarea id="stylePrompt" placeholder="Enter your preferred style as a prompt"></textarea>
+        <button id="generateButton">Generate</button>
+        <div id="generateLoadingSymbol" style="display: none;">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+        
+        <div id="uploadedImageContainer">
+            <h3>Input Image</h3>
+            <img id="inputImage" alt="Input Image">
+            <h3>Generated Image</h3>
+            <img id="generatedImage" alt="Generated Image">
+        </div>
+       <!-- Updated Shop Here -->
+       <h3>Shop Here</h3>
+        <!--a id="shopLink" href="#" style="display: none;">Shop Here</a-->
+        <!-- Search Query Box -->
+        <div id="searchQueryBox">
+            <input type="text" id="searchQueryInput" placeholder="Enter your search query">
+            <button id="searchButton">Search</button>
+        </div>
+        <div id="searchLoadingSymbol" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+        <!-- Search Results -->
+        <div id="searchResults"></div>
+
+    </form>
+    <script>
+         // Function to update the style prompt based on the selected category
+         function updateStylePrompt() {
+            const categorySelect = document.getElementById('category');
+            const stylePromptInput = document.getElementById('stylePrompt');
+            
+            // Get the selected category
+            const selectedCategory = categorySelect.value;
+            
+            // Update the style prompt with the selected category
+            stylePromptInput.value = "Generate a " + selectedCategory + " ";
+        }
+        
+        // Attach event listener to category select to update the style prompt
+        document.getElementById('category').addEventListener('change', updateStylePrompt);
+        document.addEventListener("DOMContentLoaded", function () {
+            let imageProcessed = false;
+            console.log('Document is fully loaded');
+    
+            function submitForm(event) {
+                event.preventDefault(); // Prevent the default form submission behavior
+    
+                console.log('Submit form function called');
+    
+                const fileInput = document.getElementById('imageUpload');
+                const categorySelect = document.getElementById('category');
+                const stylePromptInput = document.getElementById('stylePrompt');
+    
+                const formData = new FormData();
+                formData.append('image', fileInput.files[0]);
+                formData.append('category', categorySelect.value);
+                formData.append('stylePrompt', stylePromptInput.value);
+    
+                // Display loading symbol for image generation
+                document.getElementById('generateLoadingSymbol').style.display = 'inline';
+
+                // Upload image to generate output
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Hide loading symbol for image generation
+                    document.getElementById('generateLoadingSymbol').style.display = 'none';
+
+                    // Display uploaded image
+                    document.getElementById('inputImage').src = URL.createObjectURL(fileInput.files[0]);
+    
+                    // Display generated image
+                    document.getElementById('generatedImage').src = data.imageUrl;
+    
+                    // Show the shop link
+                    //document.getElementById('shopLink').style.display = 'inline';
+
+                    // Show the search query box
+                    document.getElementById('searchQueryBox').style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error uploading image:', error);
+                    document.getElementById('generateLoadingSymbol').innerHTML = 'Error processing image';
+                });
+                imageProcessed = true;
+                document.getElementById('uploadForm').removeEventListener('submit', submitForm);
+            }
+    
+            // Attach the submitForm function to the form's submit event
+            document.getElementById('uploadForm').addEventListener('submit', submitForm);
+
+            // Event listener for search button
+            document.getElementById('searchButton').addEventListener('click', function(event) {
+                event.preventDefault();
+                if (imageProcessed) {
+                    const query = document.getElementById('searchQueryInput').value;
+                    if (query) {
+                        // Display loading symbol for search
+                        document.getElementById('searchLoadingSymbol').style.display = 'inline';
+
+                        fetch('/search', {
+                            method: 'POST',
+                            body: new URLSearchParams({ query: query })
+                        })
+                        .then(response => response.json())
+                        .then(results => {
+                            // Display the search results
+                            const searchResultsDiv = document.getElementById('searchResults');
+                            searchResultsDiv.innerHTML = `
+                                <h1>Search Results</h1>
+                                <ul>
+                                    ${results.map(item => `
+                                        <li>
+                                            <h2>${item.title}</h2>
+                                            <img src="${item.thumbnail}" alt="${item.title}">
+                                            <p>${item.price}</p>
+                                            <p>${item.source}</p>
+                                            <a href="${item.link}" target="_blank">View Product</a>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            `;
+
+                            // Hide loading symbol for search
+                            document.getElementById('searchLoadingSymbol').style.display = 'none';
+                        })
+                        .catch(error => {
+                            console.error('Error fetching search results:', error);
+                            // Hide loading symbol for search
+                            document.getElementById('searchLoadingSymbol').style.display = 'none';
+                        });
+                    }
+                } else {
+                    // Display a message or take appropriate action if image processing is not completed
+                    alert('Please generate the image first.');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
